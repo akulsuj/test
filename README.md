@@ -203,5 +203,3 @@ class Test_FileOperations(unittest.TestCase):
         self.mock_dbops_instance.BuildErrorMessage.assert_called_once_with(f'E003,{filename},None; E002,,')
         self.mock_copyfile.assert_not_called()
         self.mock_dbops_instance.insert_actionLog.assert_called_once()
-
-    def test_Downloadfilenames_top
