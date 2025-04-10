@@ -91,7 +91,7 @@ class Test_FileOperations(unittest.TestCase):
 
     def test_Downloadfilenames_toprocess_ftcgrossup_success(self):
         server_path, local_path, action, year = 's', 'l', 'FTCGrossup', '2023'
-        files = [f'2023_Q{i}_FTCGrossup.xlsx' for i in range(1, 5)]
+        files = [f'2023_Q1_FTCGrossup.xlsx', f'2023_Q2_FTCGrossup.xlsx', f'2023_Q3_FTCGrossup.xlsx', f'2023_Q4_FTCGrossup.xlsx']
         self.mock_listdir.return_value = files
         result = fo.Downloadfilenames_toprocess(server_path, local_path, action, year)
         expected_dest_files_os_join = [self._build_path(local_path, f) for f in files]
@@ -100,7 +100,8 @@ class Test_FileOperations(unittest.TestCase):
         self.assertEqual(sorted(result), sorted(expected_dest_files_os_join))
         self.mock_is_open.assert_has_calls(expected_is_open_calls, any_order=True)
         self.assertEqual(self.mock_copyfile.call_count, 4)
-        self.mock_copyfile.assert_any_call(server_path + '//' + files[0], local_path + '//' + files[0])
+        for src, dest in zip(expected_src_files_os_join, expected_dest_files_os_join):
+            self.mock_copyfile.assert_any_call(src, dest)
         self.mock_dbops_instance.insert_actionLog.assert_called_once()
 
     def test_Downloadfilenames_toprocess_wrong_file_type_schd(self):
@@ -195,3 +196,12 @@ class Test_FileOperations(unittest.TestCase):
         server_path, local_path, action, year = 's', 'l', 'QualPctFTC', '2023'
         filename = '2023QualFTC.csv'
         self.mock_listdir.return_value = [filename]
+        with self.assertRaises(FileValidationException):
+            fo.Downloadfilenames_toprocess(server_path, local_path, action, year)
+        expected_src_os_join = self._build_path(server_path, filename)
+        self.mock_is_open.assert_called_once_with(expected_src_os_join)
+        self.mock_dbops_instance.BuildErrorMessage.assert_called_once_with(f'E003,{filename},None; E002,,')
+        self.mock_copyfile.assert_not_called()
+        self.mock_dbops_instance.insert_actionLog.assert_called_once()
+
+    def test_Downloadfilenames_top
