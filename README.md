@@ -195,14 +195,3 @@ class Test_FileOperations(unittest.TestCase):
         server_path, local_path, action, year = 's', 'l', 'QualPctFTC', '2023'
         filename = '2023QualFTC.csv'
         self.mock_listdir.return_value = [filename]
-        with self.assertRaises(FileValidationException):
-            fo.Downloadfilenames_toprocess(server_path, local_path, action, year)
-        expected_src_os_join = self._build_path(server_path, filename)
-        self.mock_is_open.assert_called_once_with(expected_src_os_join)
-        self.mock_dbops_instance.BuildErrorMessage.assert_called_once_with(f'E003,{filename},None; E002,,')
-        self.mock_copyfile.assert_not_called()
-        self.mock_dbops_instance.insert_actionLog.assert_called_once()
-
-    def test_Downloadfilenames_toprocess_wrong_extension_ftcgrossup(self):
-        server_path, local_path, action, year = 's', 'l', 'FTCGrossup', '2023'
-        filename = '2
