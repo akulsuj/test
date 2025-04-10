@@ -371,6 +371,189 @@ if __name__ == '__main__':
 
 
 
+08:18:10 TeamCity server version is 2024.03 (build 156166)
+08:18:10 Start computing revisions
+08:18:19 Finalize build settings
+08:22:16 The build is removed from the queue to be prepared for the start
+08:22:16 Starting the build on the agent "aks-teamcity-python3-9-1537"
+08:22:17 Agent time zone: Europe/London
+08:22:17 Agent is running under JRE: 11.0.16.1+9-LTS
+08:22:17 Updating tools for build
+08:22:17 Clearing temporary directory: /opt/buildagent/temp/buildTmp
+08:22:18 Retrieved 0 secrets from Azure Key Vault
+08:22:18 Publishing internal artifacts
+08:22:18 Clean build enabled: removing old files from /opt/buildagent/work/9422c6f94111a311
+08:22:18 Checkout directory: /opt/buildagent/work/9422c6f94111a311
+08:22:18 Updating sources: auto checkout (on server)
+08:22:19 Step 1/16: PYTHON AND PIP VERSION (Command Line)
+08:22:20 Step 2/16: CREATE VIRTUAL ENV : WINDOWS (PowerShell)
+08:22:20 Step 3/16: CREATE VIRTUAL ENV : LINUX (Command Line)
+08:22:20 Step 4/16: PIP INSTALL : WINDOWS (PowerShell)
+08:22:20 Step 5/16: PIP INSTALL : LINUX (Command Line)
+08:23:46 Step 6/16: Install ODBC 17 (Command Line)
+08:23:58 Step 7/16: PYTHON PYTEST : LINUX (Command Line)
+08:23:58   Build step condition "teamcity.agent.jvm.os.name starts with Linux" is satisfied
+08:23:58   Content of /opt/buildagent/temp/agentTmp/custom_script13770234495228876369 file: 
+  #. ./myenv/bin/activate
+  
+  echo "pip install required modules for pytest.."
+  #pip install --upgrade pip
+  #pip install -r requirements.txt --index-url https://artifactory.platform.manulife.io/artifactory/api/pypi/pypi/simple
+  #pip install pytest-cov --index-url https://artifactory.platform.manulife.io/artifactory/api/pypi/pypi/simple
+  #pip install coverage --index-url https://artifactory.platform.manulife.io/artifactory/api/pypi/pypi/simple
+  #pip install pyodbc --index-url https://artifactory.platform.manulife.io/artifactory/api/pypi/pypi/simple
+  
+  echo "checking OBDC Driver..."
+  odbcinst -q -d -n
+  
+  echo "Finding libmsodbcsql..."
+  find / -name "libmsodbcsql-17*.so*"
+  
+  echo "Running test..."
+  python -m pytest --cov=. test/ --cov-report xml
+08:23:58   Starting: /opt/buildagent/temp/agentTmp/custom_script13770234495228876369
+08:23:58   in directory: /opt/buildagent/work/9422c6f94111a311
+08:23:58   pip install required modules for pytest..
+08:23:58   checking OBDC Driver...
+08:23:58   [ODBC Driver 17 for SQL Server]
+08:23:58   Finding libmsodbcsql...
+08:23:58   /usr/lib/libmsodbcsql-17.so
+08:23:58   /usr/lib64/libmsodbcsql-17.so
+08:23:58   /opt/microsoft/msodbcsql17/lib64/libmsodbcsql-17.10.so.6.1
+08:23:58   Running test...
+08:24:33   ============================= test session starts ==============================
+08:24:33   platform linux -- Python 3.9.5, pytest-7.2.0, pluggy-1.5.0
+08:24:33   rootdir: /opt/buildagent/work/9422c6f94111a311
+08:24:33   plugins: cov-4.0.0, Flask-Dance-3.2.0
+08:24:33   collected 75 items / 1 error
+08:24:33   
+08:24:33   ==================================== ERRORS ====================================
+08:24:33   ____________ ERROR collecting test/Services/test_fileoperations.py _____________
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:2336: in _wrap_pool_connect
+08:24:33       return fn()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:304: in unique_connection
+08:24:33       return _ConnectionFairy._checkout(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:778: in _checkout
+08:24:33       fairy = _ConnectionRecord.checkout(pool)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:495: in checkout
+08:24:33       rec = pool._do_get()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/impl.py:140: in _do_get
+08:24:33       self._dec_overflow()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/langhelpers.py:68: in __exit__
+08:24:33       compat.raise_(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/compat.py:182: in raise_
+08:24:33       raise exception
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/impl.py:137: in _do_get
+08:24:33       return self._create_connection()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:309: in _create_connection
+08:24:33       return _ConnectionRecord(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:440: in __init__
+08:24:33       self.__connect(first_connect_check=True)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:661: in __connect
+08:24:33       pool.logger.debug("Error on connect(): %s", e)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/langhelpers.py:68: in __exit__
+08:24:33       compat.raise_(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/compat.py:182: in raise_
+08:24:33       raise exception
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:656: in __connect
+08:24:33       connection = pool._invoke_creator(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/strategies.py:114: in connect
+08:24:33       return dialect.connect(*cargs, **cparams)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/default.py:508: in connect
+08:24:33       return self.dbapi.connect(*cargs, **cparams)
+08:24:33   E   pyodbc.OperationalError: ('HYT00', '[HYT00] [Microsoft][ODBC Driver 17 for SQL Server]Login timeout expired (0) (SQLDriverConnect)')
+08:24:33   
+08:24:33   The above exception was the direct cause of the following exception:
+08:24:33   test/Services/test_fileoperations.py:8: in <module>
+08:24:33       import Services.fileoperations as fo
+08:24:33   Services/fileoperations.py:11: in <module>
+08:24:33       dbops_obj = dbops.dboperations()
+08:24:33   Services/dboperations.py:28: in __init__
+08:24:33       self.connection = self.engine.connect()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:2263: in connect
+08:24:33       return self._connection_cls(self, **kwargs)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:104: in __init__
+08:24:33       else engine.raw_connection()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:2369: in raw_connection
+08:24:33       return self._wrap_pool_connect(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:2339: in _wrap_pool_connect
+08:24:33       Connection._handle_dbapi_exception_noconnection(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:1583: in _handle_dbapi_exception_noconnection
+08:24:33       util.raise_(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/compat.py:182: in raise_
+08:24:33       raise exception
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/base.py:2336: in _wrap_pool_connect
+08:24:33       return fn()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:304: in unique_connection
+08:24:33       return _ConnectionFairy._checkout(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:778: in _checkout
+08:24:33       fairy = _ConnectionRecord.checkout(pool)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:495: in checkout
+08:24:33       rec = pool._do_get()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/impl.py:140: in _do_get
+08:24:33       self._dec_overflow()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/langhelpers.py:68: in __exit__
+08:24:33       compat.raise_(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/compat.py:182: in raise_
+08:24:33       raise exception
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/impl.py:137: in _do_get
+08:24:33       return self._create_connection()
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:309: in _create_connection
+08:24:33       return _ConnectionRecord(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:440: in __init__
+08:24:33       self.__connect(first_connect_check=True)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:661: in __connect
+08:24:33       pool.logger.debug("Error on connect(): %s", e)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/langhelpers.py:68: in __exit__
+08:24:33       compat.raise_(
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/util/compat.py:182: in raise_
+08:24:33       raise exception
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/pool/base.py:656: in __connect
+08:24:33       connection = pool._invoke_creator(self)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/strategies.py:114: in connect
+08:24:33       return dialect.connect(*cargs, **cparams)
+08:24:33   /usr/local/lib/python3.9/dist-packages/sqlalchemy/engine/default.py:508: in connect
+08:24:33       return self.dbapi.connect(*cargs, **cparams)
+08:24:33   E   sqlalchemy.exc.OperationalError: (pyodbc.OperationalError) ('HYT00', '[HYT00] [Microsoft][ODBC Driver 17 for SQL Server]Login timeout expired (0) (SQLDriverConnect)')
+08:24:33   E   (Background on this error at: http://sqlalche.me/e/13/e3q8)
+08:24:33   =============================== warnings summary ===============================
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:10
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:10: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       _nlv = LooseVersion(_np_version)
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:11
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:11: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       np_version_under1p17 = _nlv < LooseVersion("1.17")
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:12
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:12: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       np_version_under1p18 = _nlv < LooseVersion("1.18")
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:13
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:13: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       _np_version_under1p19 = _nlv < LooseVersion("1.19")
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:14
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/__init__.py:14: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       _np_version_under1p20 = _nlv < LooseVersion("1.20")
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/setuptools/_distutils/version.py:337
+08:24:33     /usr/local/lib/python3.9/dist-packages/setuptools/_distutils/version.py:337: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       other = LooseVersion(other)
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/function.py:120
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/function.py:120
+08:24:33     /usr/local/lib/python3.9/dist-packages/pandas/compat/numpy/function.py:120: DeprecationWarning: distutils Version classes are deprecated. Use packaging.version instead.
+08:24:33       if LooseVersion(__version__) >= LooseVersion("1.17.0"):
+08:24:33   
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/flask_sqlalchemy/__init__.py:14
+08:24:33   ../../../../usr/local/lib/python3.9/dist-packages/flask_sqlalchemy/__init__.py:14
+08:24:33     /usr/local/lib/python3.9/dist-packages/flask_sqlalchemy/__init__.py:14: DeprecationWarning: '_app_ctx_stack' is deprecated and will be removed in Flask 2.3.
+08:24:33       from flask import _app_ctx_stack, abort, current_app, request
+08:24:33   
+08:24:33   -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+08:24:33   
+08:24:33   ----------- coverage: platform linux, python 3.9.5-final-0 -----------
 08:24:33   Coverage XML written to file coverage.xml
 08:24:33   
 08:24:33   =========================== short test summary info ============================
