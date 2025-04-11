@@ -1,180 +1,238 @@
-import logging
-import shutil
+import unittest
 import os
-from Entities.Customentities import ApihomeResp
-from Services import CustomException, dboperations as dbops
+import shutil
+from unittest.mock import patch, mock_open, MagicMock
 from datetime import datetime
-import globalvars as gvar
-import datetime
 import re
+from Entities.Customentities import ApihomeResp
+from Services import CustomException
+import fileoperations as fops
+import globalvars as gvar
 
-dbops_obj = dbops.dboperations()
-gvar.sadrd_settings = dbops_obj.SadrdSysSettings()
-gvar.sadrd_ErrMessages = dbops_obj.SADRD_Sys_Message()
+class TestFileOperations(unittest.TestCase):
 
-def ExtractFilesToLoad(folderpath, action):    
-    inpLoadFolder = ""    
-   
-    # Get list of input files to process
-    lsinpfiles = getinpfilenames_toprocess(folderpath,inpLoadFolder);
-    return lsinpfiles
+    def setUp(self):
+        self.test_folder = "test_folder"
+        self.input_folder = os.path.join(self.test_folder, "input")
+        os.makedirs(self.input_folder, exist_ok=True)
+        gvar.sadrd_settings = []
+        gvar.user_id = "test_user"
+        fops.dbops_obj = MagicMock() # Mock the dboperations object
 
-def getinpfilenames_toprocess(folderpath,inpLoadFolder):
-    logging.debug("In getinpfilenames_toprocess() method")
+    def tearDown(self):
+        shutil.rmtree(self.test_folder, ignore_errors=True)
 
-    lsinpfiles = []  
-    Inputdirpath = os.path.join(folderpath, inpLoadFolder)
-    
-    for filename in os.listdir(Inputdirpath):
-         if filename.endswith(".xlsx") or filename.endswith(".xlsm") or filename.endswith(".csv"):
-            lsinpfiles.append(os.path.join(Inputdirpath, filename))
-            continue
-         else:
-            continue
+    def create_dummy_file(self, filename, content=""):
+        filepath = os.path.join(self.input_folder, filename)
+        with open(filepath, "w") as f:
+            f.write(content)
+        return filepath
 
-    return lsinpfiles
+    def test_ExtractFilesToLoad_valid_files(self):
+        self.create_dummy_file("test1.xlsx")
+        self.create_dummy_file("test2.xlsm")
+        self.create_dummy_file("test3.csv")
+        self.create_dummy_file("ignore.txt")
 
-def DownloadServerFilesToLoad(serverInputFilesByAction, Inputdirpath, action, year):
-    logging.debug("In DownloadServerFilesToLoad() method")
-    # Get list of input files to process
-    lsinpfiles = Downloadfilenames_toprocess(serverInputFilesByAction, Inputdirpath, action, year);
-    return lsinpfiles
+        expected_files = [
+            os.path.join(self.input_folder, "test1.xlsx"),
+            os.path.join(self.input_folder, "test2.xlsm"),
+            os.path.join(self.input_folder, "test3.csv"),
+        ]
+        actual_files = fops.ExtractFilesToLoad(self.test_folder, "some_action")
+        self.assertEqual(sorted(actual_files), sorted(expected_files))
 
-def Downloadfilenames_toprocess(serverInputFilesByAction, Inputdirpath, action, inputYear):
-    logging.debug("In Downloadfilenames_toprocess() method")
-    try:
-        lsinpfiles = []        
-        inputFilesQtrList = []
-        lstInpfilesVerified = []
-        
-        errFileImport = ""
-        errFileImportWarning = ""
+    def test_ExtractFilesToLoad_no_valid_files(self):
+        self.create_dummy_file("ignore1.txt")
+        self.create_dummy_file("ignore2")
 
-        response = ApihomeResp()
-        
-        if not os.path.exists(Inputdirpath):
-            os.makedirs(Inputdirpath)
+        actual_files = fops.ExtractFilesToLoad(self.test_folder, "some_action")
+        self.assertEqual(actual_files, [])
 
-        companyList = []
-        quartersList = []
-        for (row, sadrdSysSetting) in enumerate(gvar.sadrd_settings):
-            if sadrdSysSetting.settingName == "Valid_Company":
-                companyList.append(sadrdSysSetting.settingValue)
-            if sadrdSysSetting.settingName == "Valid_Quarter":
-                quartersList.append(sadrdSysSetting.settingValue)
+    def test_getinpfilenames_toprocess_valid_files(self):
+        self.create_dummy_file("data1.xlsx")
+        self.create_dummy_file("data2.xlsm")
+        self.create_dummy_file("data3.csv")
+        self.create_dummy_file("temp.txt")
 
-        if action =="Annual Stmt - Sch D":
-            datatbImportTypes = [x for x in gvar.sadrd_settings if x.settingName == 'Filename_AnnStmtSchD']
-            datatbImportType = datatbImportTypes[0].settingValue
-        elif action =="QualPctFTC":
-            datatbImportTypes = [x for x in gvar.sadrd_settings if x.settingName == 'Filename_QualFTC']
-            datatbImportType = datatbImportTypes[0].settingValue
-        elif action =="FTCGrossup":
-            datatbImportTypes = [x for x in gvar.sadrd_settings if x.settingName == 'Filename_FTCGrossup']
-            datatbImportType = datatbImportTypes[0].settingValue
-      
-        for filename in os.listdir(serverInputFilesByAction):
-            if (filename.endswith(".csv") or filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".xlsm")):
-                if datatbImportType in filename and not filename.startswith("~$"):
-                    lsinpfiles.append(filename) 
+        expected_files = [
+            os.path.join(self.input_folder, "data1.xlsx"),
+            os.path.join(self.input_folder, "data2.xlsm"),
+            os.path.join(self.input_folder, "data3.csv"),
+        ]
+        actual_files = fops.getinpfilenames_toprocess(self.test_folder, "")
+        self.assertEqual(sorted(actual_files), sorted(expected_files))
 
-        for filename in lsinpfiles:
-            errMessage =""            
-            file_name_1 = filename.split(".")[0]
-            if file_name_1 != None:
-                #Next 4 lines extracts Company Name           
-                removeSpacesFromFileName = "".join(re.split("[ ]*", file_name_1)) #Eg '2019JHUSASchDPart2'
-                splitBySchD = removeSpacesFromFileName.split("SchD")#Eg ['2019JHUSA', 'Part2']
-                get1stSplitValueAftersplitBySchD = splitBySchD[0]#Eg 2019JHUSA
-                fileNameCompany = get1stSplitValueAftersplitBySchD[4:] #Eg JHUSA
-            if action == "FTCGrossup":
-                fileComponents = file_name_1.split("_")
-                fileQuarter = fileComponents[1]
-                inputFilesQtrList.append(fileQuarter)
+    def test_getinpfilenames_toprocess_no_valid_files(self):
+        self.create_dummy_file("log.txt")
+        self.create_dummy_file("backup")
 
-            if (filename.endswith(".csv") or filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".xlsm")):
-                #if filename.startswith("~"):
-                #f = open(serverInputFilesByAction +"\\" + filename,'r')
-                #if(open(serverInputFilesByAction +"\\" + filename,'r').closed):
-                if is_open(serverInputFilesByAction +"\\" + filename) == True:
-                        errMessage = 'E006' + "," + filename + "," + "None"
-                        errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
+        actual_files = fops.getinpfilenames_toprocess(self.test_folder, "")
+        self.assertEqual(actual_files, [])
 
-                if (action =="Annual Stmt - Sch D" and datatbImportType not in filename ) or (action =="QualPctFTC" and  datatbImportType not in filename) or (action =="FTCGrossup" and  datatbImportType not in filename):
-                #if(action =="FTCGrossup" and  datatbImportType not in filename)
-                    errMessage = 'E013' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
-                
-                if (action =="Annual Stmt - Sch D" and datatbImportType in filename and not filename.endswith(".csv")):
-                    errMessage = 'E003' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
-                
-                if (action =="QualPctFTC" and datatbImportType in filename and (not filename.endswith(".xlsx") and not filename.endswith(".xls") and not filename.endswith(".xlsm"))):
-                    errMessage = 'E003' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    @patch("shutil.copyfile")
+    def test_DownloadServerFilesToLoad_annual_schd_success(self, mock_copyfile, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["2025JHUSASchDPart1.csv", "ignore.txt"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD'),
+                               MagicMock(settingName='Valid_Company', settingValue='JHUSA')]
 
-                if (action =="FTCGrossup" and datatbImportType in filename and (not filename.endswith(".xlsx") and not filename.endswith(".xls") and not filename.endswith(".xlsm"))):
-                    errMessage = 'E003' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
-                
-                if (action =="FTCGrossup" and datatbImportType in filename and (filename.endswith(".xlsx") or filename.endswith(".xls") or filename.endswith(".xlsm")) and fileQuarter not in quartersList):
-                    errMessage = 'E013' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage)
-                
-                if (action =="Annual Stmt - Sch D" and datatbImportType in filename and fileNameCompany not in companyList):
-                    errMessage = 'E011' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage) 
-                                    
-                if int(inputYear) != int(filename[0:4]):                    
-                    errMessage = 'E012' + "," + filename + "," + "None"
-                    errFileImport = errMessage if errFileImport == '' else (errFileImport + "; " + errMessage) 
+        result = fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertEqual(len(result), 1)
+        self.assertTrue(os.path.join(self.input_folder, "2025JHUSASchDPart1.csv") in result)
+        mock_copyfile.assert_called_once_with("server_path//2025JHUSASchDPart1.csv", os.path.join(self.input_folder, "2025JHUSASchDPart1.csv"))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
 
-                if errMessage == "":
-                    shutil.copyfile(serverInputFilesByAction + '//' + filename, Inputdirpath + '//' + filename)
-                    lstInpfilesVerified.append(os.path.join(Inputdirpath, filename))          
-                continue 
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    @patch("shutil.copyfile")
+    def test_DownloadServerFilesToLoad_qualpctftc_success(self, mock_copyfile, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["data_QualPct.xlsx", "other.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_QualFTC', settingValue='QualPct')]
 
-        dbops_obj.insert_actionLog(datetime.datetime.now().month, datetime.datetime.now().year, gvar.user_id, action, 'Downloadfilenames_toprocess', str(datetime.datetime.now())[0:23], "Downloadfilenames_toprocess method executed", None)
-        
-        if errFileImport != "":
-            if len(lstInpfilesVerified) == 0:
-                errNoFilesMessage = 'E002' + "," + "" + "," + ""
-                errFileImport = errFileImport if errNoFilesMessage == '' else (errFileImport + "; " + errNoFilesMessage)
-                lstInpfilesVerified = []
-            errFileImport = errFileImport if errFileImportWarning == '' else (errFileImport + "; " + errFileImportWarning)
-            errMessageComplete = dbops_obj.BuildErrorMessage(errFileImport)         
-            raise CustomException.FileValidationException(errMessageComplete)
-    except Exception as e: 
-        dbops.logger.error('Error in Downloadfilenames_toprocess -' + str(e))
-        logging.exception("Exception occurred in Downloadfilenames_toprocess() method :: " + str(e)) 
-        raise e
+        result = fops.DownloadServerFilesToLoad("server_path", self.input_folder, "QualPctFTC", "2025")
+        self.assertEqual(len(result), 1)
+        self.assertTrue(os.path.join(self.input_folder, "data_QualPct.xlsx") in result)
+        mock_copyfile.assert_called_once_with("server_path//data_QualPct.xlsx", os.path.join(self.input_folder, "data_QualPct.xlsx"))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
 
-    if len(lsinpfiles) == 0 or (action == "FTCGrossup" and len(lsinpfiles) != 4):
-        if action == "FTCGrossup" and len(lsinpfiles) != 0:
-            errMessage = 'E028' + "," + "" + "," + ""
-        else:
-            errMessage = 'E002' + "," + "" + "," + ""
-        response.status = "Failure"
-        response.message = dbops_obj.BuildErrorMessage(errMessage)
-        dbops.logger.error(response.message)
-        raise CustomException.FileValidationException(response.message)
-    
-    if (action == "FTCGrossup"):
-        qtrValidationList = [item for item in quartersList if item not in inputFilesQtrList]   
-        if len(qtrValidationList) != 0:
-            errMessage = 'E032' + "," + ' | '.join(qtrValidationList) + "," + "None" 
-            response.status = "Failure"
-            response.message = dbops_obj.BuildErrorMessage(errMessage)
-            dbops.logger.error(response.message)
-            raise CustomException.FileValidationException(response.message)
-    
-    return lstInpfilesVerified
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    @patch("shutil.copyfile")
+    def test_DownloadServerFilesToLoad_ftcgrossup_success(self, mock_copyfile, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["FTCGrossup_Q1.xlsm", "FTCGrossup_Q2.xls", "FTCGrossup_Q3.xlsx", "FTCGrossup_Q4.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_FTCGrossup', settingValue='FTCGrossup'),
+                               MagicMock(settingName='Valid_Quarter', settingValue='Q1'),
+                               MagicMock(settingName='Valid_Quarter', settingValue='Q2'),
+                               MagicMock(settingName='Valid_Quarter', settingValue='Q3'),
+                               MagicMock(settingName='Valid_Quarter', settingValue='Q4')]
 
-def is_open(file_name):
-    if os.path.exists(file_name):
-        try:
-            os.rename(file_name, file_name) #can't rename an open file so an error will be thrown
-            return False
-        except:
-            return True
-    raise NameError
+        result = fops.DownloadServerFilesToLoad("server_path", self.input_folder, "FTCGrossup", "2025")
+        self.assertEqual(len(result), 4)
+        expected_files = [
+            os.path.join(self.input_folder, "FTCGrossup_Q1.xlsm"),
+            os.path.join(self.input_folder, "FTCGrossup_Q2.xls"),
+            os.path.join(self.input_folder, "FTCGrossup_Q3.xlsx"),
+            os.path.join(self.input_folder, "FTCGrossup_Q4.csv"),
+        ]
+        self.assertEqual(sorted(result), sorted(expected_files))
+        self.assertEqual(mock_copyfile.call_count, 4)
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_no_files_found(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = []
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: No files found."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertEqual(str(context.exception), "Error: No files found.")
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_file_type_annual(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["test.xlsx"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid file type(s) found: test.xlsx. Expected .csv."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertTrue("Invalid file type(s) found: test.xlsx. Expected .csv" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_file_type_qualpct(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["data_QualPct.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_QualFTC', settingValue='QualPct')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid file type(s) found: data_QualPct.csv. Expected .xlsx, .xls, or .xlsm."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "QualPctFTC", "2025")
+        self.assertTrue("Invalid file type(s) found: data_QualPct.csv. Expected .xlsx, .xls, or .xlsm" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_file_type_ftcgrossup(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["FTCGrossup_Q1.txt"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_FTCGrossup', settingValue='FTCGrossup')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid file type(s) found: FTCGrossup_Q1.txt. Expected .xlsx, .xls, or .xlsm."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "FTCGrossup", "2025")
+        self.assertTrue("Invalid file type(s) found: FTCGrossup_Q1.txt. Expected .xlsx, .xls, or .xlsm" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_filename_format_annual(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["2025InvalidSchD.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD'),
+                               MagicMock(settingName='Valid_Company', settingValue='JHUSA')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid filename format: 2025InvalidSchD.csv. Expected filename to contain 'SchD'."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertTrue("Invalid filename format: 2025InvalidSchD.csv. Expected filename to contain 'SchD'" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_filename_format_qualpct(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["dataInvalid.xlsx"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_QualFTC', settingValue='QualPct')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid filename format: dataInvalid.xlsx. Expected filename to contain 'QualPct'."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "QualPctFTC", "2025")
+        self.assertTrue("Invalid filename format: dataInvalid.xlsx. Expected filename to contain 'QualPct'" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_filename_format_ftcgrossup(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["Invalid_Q1.xlsx"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_FTCGrossup', settingValue='FTCGrossup')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid filename format: Invalid_Q1.xlsx. Expected filename to contain 'FTCGrossup'."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "FTCGrossup", "2025")
+        self.assertTrue("Invalid filename format: Invalid_Q1.xlsx. Expected filename to contain 'FTCGrossup'" in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_file_open_error(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["test.xlsx"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD')]
+        fops.is_open = MagicMock(return_value=True)
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: File is currently open: test.xlsx."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertTrue("File is currently open: test.xlsx." in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_incorrect_year(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["2024TestSchD.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD')]
+        fops.dbops_obj.BuildErrorMessage.return_value = "Error: Invalid year in filename: 2024TestSchD.csv. Expected year: 2025."
+
+        with self.assertRaises(CustomException.FileValidationException) as context:
+            fops.DownloadServerFilesToLoad("server_path", self.input_folder, "Annual Stmt - Sch D", "2025")
+        self.assertTrue("Invalid year in filename: 2024TestSchD.csv. Expected year: 2025." in str(context.exception))
+        fops.dbops_obj.insert_actionLog.assert_called_once()
+
+    @patch("os.makedirs")
+    @patch("os.listdir")
+    def test_DownloadServerFilesToLoad_invalid_company(self, mock_listdir, mock_makedirs):
+        mock_listdir.return_value = ["2025InvalidCompanySchD.csv"]
+        gvar.sadrd_settings = [MagicMock(settingName='Filename_AnnStmtSchD', settingValue='SchD'),
+                               MagicMock(settingName='Valid_Company', settingValue='JHUSA
