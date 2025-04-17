@@ -1,24 +1,33 @@
-8.7. MISSING X-CONTENT-TYPE-OPTIONS HEADER
-Status: Open (Previously Discovered)
-Rating: Low
-Location:
-• https://sadrd.manulife.com/app/
-Description:
-The 'X Content Type Options' response header tells web browsers to disable MIME and content
-sniffing.
-Previous Proof of Concept:
-1. Configure the browser to use a proxy like Burp Suite.
-2. Launch the application in the browser.
-3. Intercept the request in Burp suite and send it to repeater.
-4. Navigate to repeater, click on send button and observe the application response.
-5. It can be observed that the "X-Content type options " Header is missing from the
-response.
-Retest Proof of Concept:
-1. Open the Burp Suite and its pre-built browser.
-2. Navigate the specified URL in the browser.
-3. Right-click and select "Inspect," then go to the "Network" tab and refresh the page.
-In Conclusion: After investigating the entire application, it has been verified that the previously
-discovered vulnerability, 'Missing X-Content-Type-Options Header,' remains open because not
-all endpoints have the specified header in the production environment.
-Recommended Remediation:
-The only valid for this header is “X-Content-Type-Options: nosniff” 
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+  <system.webServer>
+    <modules>
+      <remove name="WebDAVModule" />
+    </modules>
+    <handlers>
+      <add name="Python FastCGI" path="*" verb="*" modules="FastCgiModule" scriptProcessor="E:\apps\SADRD\vSadrdEnv\python.exe|E:\apps\SADRD\vSadrdEnv\Lib\site-packages\wfastcgi.py" resourceType="Unspecified" requireAccess="Script" />
+    </handlers>
+    <directoryBrowse enabled="true" />
+    <rewrite>
+      <outboundRules rewriteBeforeCache="false">
+        <rule name="Remove Server header">
+          <match serverVariable="RESPONSE_Server" pattern=".+" />
+          <action type="Rewrite" value="" />
+        </rule>
+      </outboundRules>
+    </rewrite>
+    <httpProtocol>
+      <customHeaders>
+        <remove name="X-Powered-By" />
+        <remove name="X-ASPNet-Version" />
+      </customHeaders>
+    </httpProtocol>
+  </system.webServer>
+  <appSettings>
+    <!-- Required settings -->
+    <add key="WSGI_HANDLER" value="APIHome.mainapp" />
+    <add key="PYTHONPATH" value="E:\apps\SADRD\vSadrdEnv" />
+    <add key="FLASK_ENV" value="production" />
+    <add key="WSGI_LOG" value="E:\apps\SADRD\Logs\wfastcgi.log" />
+  </appSettings>
+</configuration>
